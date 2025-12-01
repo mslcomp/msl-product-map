@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MSL 제품 위치 관리 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+            background: #f5f5f5;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255,255,255,0.3);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #f56565;
+            color: white;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 180px);
+            overflow: auto;
+            background: white;
+            margin: 0;
+            touch-action: pan-x pan-y pinch-zoom;
+        }
+
+        .map-wrapper {
+            position: relative;
+            display: inline-block;
+            min-width: 100%;
+            min-height: 100%;
+        }
+
+        #floorplan {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: none;
+        }
+
+        .marker {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .marker:hover {
+            transform: translate(-50%, -50%) scale(1.2);
+            z-index: 20;
+        }
+
+        .marker-pin {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border: 3px solid white;
+            position: relative;
+        }
+
+        .marker-inner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .marker-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .marker:hover .marker-label {
+            opacity: 1;
+        }
+
+        .marker.highlight {
+            z-index: 30;
+        }
+
+        .marker.highlight .marker-pin {
+            animation: pulse 1s infinite;
+            background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: rotate(-45deg) scale(1); }
+            50% { transform: rotate(-45deg) scale(1.15); }
+        }
+
+        .info-panel {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            padding: 20px;
+            transition: bottom 0.3s;
+            z-index: 200;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .info-panel.active {
+            bottom: 0;
+        }
+
+        .info-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .info-panel-header h2 {
+            font-size: 18px;
+            color: #2d3748;
+        }
+
+        .close-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #f7fafc;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f7fafc;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #4a5568;
+        }
+
+        .info-value {
+            color: #2d3748;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-normal {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-low {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #4a5568;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .form-actions button {
+            flex: 1;
+        }
+
+        .stats-bar {
+            background: white;
+            padding: 15px 20px;
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .stat-item {
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 4px;
+        }
+
+        .upload-zone {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+
+        .upload-zone:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+
+        .upload-zone.drag-over {
+            border-color: #667eea;
+            background: #edf2f7;
+        }
+
+        #imageInput {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #718096;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .btn {
+                font-size: 13px;
+                padding: 7px 12px;
+            }
+
+            .stats-bar {
+                padding: 10px 15px;
+            }
+
+            .stat-value {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏭 MSL 제품 위치 관리</h1>
+        <div class="header-controls">
+            <button class="btn btn-primary" onclick="uploadImage()">📁 도면 업로드</button>
+            <button class="btn btn-success" id="addModeBtn" onclick="toggleAddMode()">➕ 제품 추가</button>
+            <button class="btn btn-primary" onclick="exportData()">💾 데이터 저장</button>
+        </div>
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="제품명 또는 위치로 검색..." oninput="searchProducts()">
+            <button class="btn btn-primary" onclick="clearSearch()">✖</button>
+        </div>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-value" id="totalProducts">0</div>
+            <div class="stat-label">총 제품</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="totalQuantity">0</div>
+            <div class="stat-label">총 수량</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="lowStockCount">0</div>
+            <div class="stat-label">재고 부족</div>
+        </div>
+    </div>
+
+    <div class="map-container" id="mapContainer">
+        <div class="map-wrapper" id="mapWrapper">
+            <img id="floorplan" src="" alt="도면을 업로드하세요" style="display:none;">
+        </div>
+    </div>
+
+    <div class="info-panel" id="infoPanel">
+        <div class="info-panel-header">
+            <h2 id="productTitle">제품 정보</h2>
+            <button class="close-btn" onclick="closeInfoPanel()">✕</button>
+        </div>
+        <div id="productInfo"></div>
+        <div class="form-actions" style="margin-top: 20px;">
+            <button class="btn btn-primary" onclick="editProduct()">수정</button>
+            <button class="btn btn-danger" onclick="deleteProduct()">삭제</button>
+        </div>
+    </div>
+
+    <div class="modal" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">제품 정보 입력</div>
+            <form id="productForm" onsubmit="saveProduct(event)">
+                <div class="form-group">
+                    <label class="form-label">제품명 *</label>
+                    <input type="text" class="form-input" id="productName" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">제품 코드</label>
+                    <input type="text" class="form-input" id="productCode">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">수량 *</label>
+                    <input type="number" class="form-input" id="productQuantity" required min="0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">위치 설명</label>
+                    <input type="text" class="form-input" id="productLocation" placeholder="예: 1층 창고 왼쪽">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">상태</label>
+                    <select class="form-input" id="productStatus">
+                        <option value="정상">정상</option>
+                        <option value="재고부족">재고부족</option>
+                        <option value="점검필요">점검필요</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">비고</label>
+                    <textarea class="form-input" id="productNotes" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-primary" onclick="closeModal()">취소</button>
+                    <button type="submit" class="btn btn-success">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-header">도면 업로드</div>
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('imageInput').click()">
+                <div style="font-size: 48px; margin-bottom: 10px;">📤</div>
+                <div>클릭하거나 파일을 드래그하여 업로드</div>
+                <div style="font-size: 12px; color: #718096; margin-top: 8px;">JPG, PNG 파일 지원</div>
+            </div>
+            <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)">
+            <button class="btn btn-primary" onclick="closeUploadModal()" style="width: 100%;">닫기</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase 설정 (여기에 Firebase 프로젝트 정보를 입력하세요)
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+        // Firebase 설정 객체 (실제 프로젝트 정보로 교체 필요)
+        const firebaseConfig = {
+            // Firebase 콘솔에서 받은 설정을 여기에 입력
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_BUCKET.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Firebase 초기화 (실제 설정이 없으면 로컬 저장소 사용)
+        let db = null;
+        let storage = null;
+        let firebaseEnabled = false;
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getDatabase(app);
+            storage = getStorage(app);
+            firebaseEnabled = true;
+            console.log('Firebase 연결 성공');
+        } catch (error) {
+            console.log('Firebase 미설정 - 로컬 저장소 사용');
+            firebaseEnabled = false;
+        }
+
+        // 전역 변수
+        window.products = [];
+        window.addMode = false;
+        window.currentProductId = null;
+        window.selectedProduct = null;
+        window.imageScale = 1;
+
+        // 로컬 저장소 관리
+        function saveToLocalStorage() {
+            localStorage.setItem('mslProducts', JSON.stringify(window.products));
+            const floorplan = document.getElementById('floorplan');
+            if (floorplan.src && !floorplan.src.includes('blob:')) {
+                localStorage.setItem('mslFloorplan', floorplan.src);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('mslProducts');
+            if (saved) {
+                window.products = JSON.parse(saved);
+                renderMarkers();
+                updateStats();
+            }
+
+            const savedImage = localStorage.getItem('mslFloorplan');
+            if (savedImage) {
+                const floorplan = document.getElementById('floorplan');
+                floorplan.src = savedImage;
+                floorplan.style.display = 'block';
+            }
+        }
+
+        // Firebase 데이터 로드
+        async function loadFromFirebase() {
+            if (!firebaseEnabled) return;
+
+            try {
+                const productsRef = ref(db, 'products');
+                const snapshot = await get(productsRef);
+                if (snapshot.exists()) {
+                    window.products = Object.values(snapshot.val());
+                    renderMarkers();
+                    updateStats();
+                }
+
+                const imageRef = ref(db, 'floorplan');
+                const imageSnapshot = await get(imageRef);
+                if (imageSnapshot.exists()) {
+                    const floorplan = document.getElementById('floorplan');
+                    floorplan.src = imageSnapshot.val();
+                    floorplan.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Firebase 로드 실패:', error);
+            }
+        }
+
+        // 제품 추가 모드 토글
+        window.toggleAddMode = function() {
+            window.addMode = !window.addMode;
+            const btn = document.getElementById('addModeBtn');
+            if (window.addMode) {
+                btn.style.background = '#48bb78';
+                btn.textContent = '✓ 추가 모드';
+                document.getElementById('mapWrapper').style.cursor = 'crosshair';
+            } else {
+                btn.style.background = '';
+                btn.textContent = '➕ 제품 추가';
+                document.getElementById('mapWrapper').style.cursor = '';
+            }
+        };
+
+        // 지도 클릭 이벤트
+        document.getElementById('mapWrapper').addEventListener('click', function(e) {
+            if (!window.addMode) return;
+
+            const rect = document.getElementById('floorplan').getBoundingClientRect();
+            const containerRect = document.getElementById('mapContainer').getBoundingClientRect();
+            
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+            window.currentProductId = Date.now().toString();
+            document.getElementById('productModal').classList.add('active');
+            document.getElementById('productForm').dataset.x = x;
+            document.getElementById('productForm').dataset.y = y;
+        });
+
+        // 제품 저장
+        window.saveProduct = async function(e) {
+            e.preventDefault();
+
+            const form = document.getElementById('productForm');
+            const product = {
+                id: window.currentProductId || Date.now().toString(),
+                name: document.getElementById('productName').value,
+                code: document.getElementById('productCode').value,
+                quantity: parseInt(document.getElementById('productQuantity').value),
+                location: document.getElementById('productLocation').value,
+                status: document.getElementById('productStatus').value,
+                notes: document.getElementById('productNotes').value,
+                x: parseFloat(form.dataset.x),
+                y: parseFloat(form.dataset.y),
+                timestamp: new Date().toISOString()
+            };
+
+            const index = window.products.findIndex(p => p.id === product.id);
+            if (index >= 0) {
+                window.products[index] = product;
+            } else {
+                window.products.push(product);
+            }
+
+            if (firebaseEnabled) {
+                await set(ref(db, 'products/' + product.id), product);
+            }
+
+            saveToLocalStorage();
+            renderMarkers();
+            updateStats();
+            closeModal();
+            toggleAddMode();
+        };
+
+        // 마커 렌더링
+        function renderMarkers() {
+            const existing = document.querySelectorAll('.marker');
+            existing.forEach(m => m.remove());
+
+            window.products.forEach((product, index) => {
+                const marker = document.createElement('div');
+                marker.className = 'marker';
+                marker.style.left = product.x + '%';
+                marker.style.top = product.y + '%';
+                marker.innerHTML = `
+                    <div class="marker-pin">
+                        <div class="marker-inner">${index + 1}</div>
+                    </div>
+                    <div class="marker-label">${product.name}</div>
+                `;
+                marker.onclick = () => showProductInfo(product);
+                document.getElementById('mapWrapper').appendChild(marker);
+            });
+        }
+
+        // 제품 정보 표시
+        window.showProductInfo = function(product) {
+            window.selectedProduct = product;
+            document.getElementById('productTitle').textContent = product.name;
+            
+            const statusClass = product.status === '정상' ? 'status-normal' : 'status-low';
+            
+            document.getElementById('productInfo').innerHTML = `
+                <div class="info-row">
+                    <span class="info-label">제품 코드</span>
+                    <span class="info-value">${product.code || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">수량</span>
+                    <span class="info-value">${product.quantity}개</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">위치</span>
+                    <span class="info-value">${product.location || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">상태</span>
+                    <span class="info-value">
+                        <span class="status-badge ${statusClass}">${product.status}</span>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">비고</span>
+                    <span class="info-value">${product.notes || '-'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">등록일</span>
+                    <span class="info-value">${new Date(product.timestamp).toLocaleDateString('ko-KR')}</span>
+                </div>
+            `;
+            
+            document.getElementById('infoPanel').classList.add('active');
+
+            // 마커 하이라이트
+            document.querySelectorAll('.marker').forEach(m => m.classList.remove('highlight'));
+            const markers = document.querySelectorAll('.marker');
+            const index = window.products.findIndex(p => p.id === product.id);
+            if (markers[index]) {
+                markers[index].classList.add('highlight');
+            }
+        };
+
+        // 제품 편집
+        window.editProduct = function() {
+            if (!window.selectedProduct) return;
+
+            window.currentProductId = window.selectedProduct.id;
+            document.getElementById('productName').value = window.selectedProduct.name;
+            document.getElementById('productCode').value = window.selectedProduct.code || '';
+            document.getElementById('productQuantity').value = window.selectedProduct.quantity;
+            document.getElementById('productLocation').value = window.selectedProduct.location || '';
+            document.getElementById('productStatus').value = window.selectedProduct.status;
+            document.getElementById('productNotes').value = window.selectedProduct.notes || '';
+            
+            const form = document.getElementById('productForm');
+            form.dataset.x = window.selectedProduct.x;
+            form.dataset.y = window.selectedProduct.y;
+
+            closeInfoPanel();
+            document.getElementById('productModal').classList.add('active');
+        };
+
+        // 제품 삭제
+        window.deleteProduct = async function() {
+            if (!window.selectedProduct) return;
+            if (!confirm('이 제품을 삭제하시겠습니까?')) return;
+
+            window.products = window.products.filter(p => p.id !== window.selectedProduct.id);
+
+            if (firebaseEnabled) {
+                await remove(ref(db, 'products/' + window.selectedProduct.id));
+            }
+
+            saveToLocalStorage();
+            renderMarkers();
+            updateStats();
+            closeInfoPanel();
+        };
+
+        // 검색
+        window.searchProducts = function() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            
+            document.querySelectorAll('.marker').forEach(m => m.classList.remove('highlight'));
+
+            if (!query) return;
+
+            window.products.forEach((product, index) => {
+                if (product.name.toLowerCase().includes(query) || 
+                    (product.location && product.location.toLowerCase().includes(query)) ||
+                    (product.code && product.code.toLowerCase().includes(query))) {
+                    const markers = document.querySelectorAll('.marker');
+                    if (markers[index]) {
+                        markers[index].classList.add('highlight');
+                    }
+                }
+            });
+        };
+
+        window.clearSearch = function() {
+            document.getElementById('searchInput').value = '';
+            document.querySelectorAll('.marker').forEach(m => m.classList.remove('highlight'));
+        };
+
+        // 통계 업데이트
+        function updateStats() {
+            document.getElementById('totalProducts').textContent = window.products.length;
+            document.getElementById('totalQuantity').textContent = window.products.reduce((sum, p) => sum + p.quantity, 0);
+            document.getElementById('lowStockCount').textContent = window.products.filter(p => p.status === '재고부족').length;
+        }
+
+        // 모달 관리
+        window.closeModal = function() {
+            document.getElementById('productModal').classList.remove('active');
+            document.getElementById('productForm').reset();
+            window.currentProductId = null;
+        };
+
+        window.closeInfoPanel = function() {
+            document.getElementById('infoPanel').classList.remove('active');
+            window.selectedProduct = null;
+            document.querySelectorAll('.marker').forEach(m => m.classList.remove('highlight'));
+        };
+
+        // 이미지 업로드
+        window.uploadImage = function() {
+            document.getElementById('uploadModal').classList.add('active');
+        };
+
+        window.closeUploadModal = function() {
+            document.getElementById('uploadModal').classList.remove('active');
+        };
+
+        window.handleImageUpload = async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                const floorplan = document.getElementById('floorplan');
+                floorplan.src = event.target.result;
+                floorplan.style.display = 'block';
+
+                if (firebaseEnabled) {
+                    try {
+                        const imageRef = storageRef(storage, 'floorplan.jpg');
+                        await uploadBytes(imageRef, file);
+                        const url = await getDownloadURL(imageRef);
+                        await set(ref(db, 'floorplan'), url);
+                    } catch (error) {
+                        console.error('Firebase 업로드 실패:', error);
+                    }
+                }
+
+                saveToLocalStorage();
+                closeUploadModal();
+            };
+            reader.readAsDataURL(file);
+        };
+
+        // 드래그 앤 드롭
+        const uploadZone = document.getElementById('uploadZone');
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('drag-over');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                document.getElementById('imageInput').files = e.dataTransfer.files;
+                handleImageUpload({ target: { files: [file] } });
+            }
+        });
+
+        // 데이터 내보내기
+        window.exportData = function() {
+            const data = {
+                products: window.products,
+                exportDate: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `msl-products-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        };
+
+        // 초기 로드
+        if (firebaseEnabled) {
+            loadFromFirebase();
+        } else {
+            loadFromLocalStorage();
+        }
+    </script>
+</body>
+</html>
