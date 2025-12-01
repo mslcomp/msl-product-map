@@ -83,6 +83,22 @@
             color: var(--text-primary);
         }
 
+        .sync-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            padding: 4px 8px;
+            border-radius: 12px;
+            background: var(--bg-tertiary);
+        }
+
+        .sync-status.synced {
+            color: var(--accent-primary);
+            background: rgba(16, 163, 127, 0.1);
+        }
+
         .top-bar-right {
             display: flex;
             gap: 8px;
@@ -724,6 +740,10 @@
                 <button class="icon-btn" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
                 <div class="logo">🏭</div>
                 <h1 class="app-title">MSL 제품 위치 관리</h1>
+                <span class="sync-status" id="syncStatus">
+                    <span id="syncIcon">●</span>
+                    <span id="syncText">연결중...</span>
+                </span>
             </div>
             <div class="top-bar-right">
                 <button class="btn" onclick="uploadImage()">도면 업로드</button>
@@ -861,29 +881,24 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getDatabase, ref, set, get, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getDatabase, ref, set, get, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
         import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
 
+        // Firebase 설정
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            databaseURL: "YOUR_DATABASE_URL",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_BUCKET.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyDJqfwCWqwUvaDElQn3C_pOS-OOcZjl7FA",
+            authDomain: "msl-product-map.firebaseapp.com",
+            databaseURL: "https://msl-product-map-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "msl-product-map",
+            storageBucket: "msl-product-map.firebasestorage.app",
+            messagingSenderId: "766580097190",
+            appId: "1:766580097190:web:992f8a7f2b7432050bb467"
         };
 
-        let db, storage, firebaseEnabled = false;
-
-        try {
-            const app = initializeApp(firebaseConfig);
-            db = getDatabase(app);
-            storage = getStorage(app);
-            firebaseEnabled = true;
-        } catch (error) {
-            console.log('로컬 저장소 모드');
-        }
+        // Firebase 초기화
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const storage = getStorage(app);
 
         window.products = [];
         window.addMode = false;
@@ -891,55 +906,49 @@
         window.selectedProduct = null;
         window.currentZoom = 1;
 
-        function saveToLocalStorage() {
-            localStorage.setItem('mslProducts', JSON.stringify(window.products));
-            const floorplan = document.getElementById('floorplan');
-            if (floorplan.src && !floorplan.src.includes('blob:')) {
-                localStorage.setItem('mslFloorplan', floorplan.src);
+        // 동기화 상태 업데이트
+        function updateSyncStatus(status, text) {
+            const syncStatus = document.getElementById('syncStatus');
+            const syncIcon = document.getElementById('syncIcon');
+            const syncText = document.getElementById('syncText');
+            
+            if (status === 'synced') {
+                syncStatus.classList.add('synced');
+                syncIcon.textContent = '●';
+                syncText.textContent = text || '동기화됨';
+            } else {
+                syncStatus.classList.remove('synced');
+                syncIcon.textContent = '○';
+                syncText.textContent = text || '연결중...';
             }
         }
 
-        function loadFromLocalStorage() {
-            const saved = localStorage.getItem('mslProducts');
-            if (saved) {
-                window.products = JSON.parse(saved);
+        // Firebase 실시간 리스너 설정
+        function setupFirebaseListeners() {
+            // 제품 데이터 실시간 동기화
+            const productsRef = ref(db, 'products');
+            onValue(productsRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    window.products = Object.values(snapshot.val());
+                } else {
+                    window.products = [];
+                }
                 renderMarkers();
                 updateStats();
                 updateProductList();
-            }
+                updateSyncStatus('synced', '동기화됨');
+            });
 
-            const savedImage = localStorage.getItem('mslFloorplan');
-            if (savedImage) {
-                const floorplan = document.getElementById('floorplan');
-                floorplan.src = savedImage;
-                floorplan.style.display = 'block';
-                document.getElementById('emptyState').style.display = 'none';
-            }
-        }
-
-        async function loadFromFirebase() {
-            if (!firebaseEnabled) return;
-            try {
-                const productsRef = ref(db, 'products');
-                const snapshot = await get(productsRef);
+            // 도면 이미지 실시간 동기화
+            const imageRef = ref(db, 'floorplan');
+            onValue(imageRef, (snapshot) => {
                 if (snapshot.exists()) {
-                    window.products = Object.values(snapshot.val());
-                    renderMarkers();
-                    updateStats();
-                    updateProductList();
-                }
-
-                const imageRef = ref(db, 'floorplan');
-                const imageSnapshot = await get(imageRef);
-                if (imageSnapshot.exists()) {
                     const floorplan = document.getElementById('floorplan');
-                    floorplan.src = imageSnapshot.val();
+                    floorplan.src = snapshot.val();
                     floorplan.style.display = 'block';
                     document.getElementById('emptyState').style.display = 'none';
                 }
-            } catch (error) {
-                console.error('Firebase 로드 실패:', error);
-            }
+            });
         }
 
         window.toggleSidebar = function() {
@@ -976,6 +985,7 @@
 
         window.saveProduct = async function(e) {
             e.preventDefault();
+            updateSyncStatus('syncing', '저장중...');
 
             const form = document.getElementById('productForm');
             const product = {
@@ -991,23 +1001,16 @@
                 timestamp: new Date().toISOString()
             };
 
-            const index = window.products.findIndex(p => p.id === product.id);
-            if (index >= 0) {
-                window.products[index] = product;
-            } else {
-                window.products.push(product);
-            }
-
-            if (firebaseEnabled) {
+            try {
                 await set(ref(db, 'products/' + product.id), product);
+                updateSyncStatus('synced', '저장완료');
+                closeModal();
+                if (window.addMode) toggleAddMode();
+            } catch (error) {
+                console.error('저장 실패:', error);
+                updateSyncStatus('error', '저장실패');
+                alert('저장에 실패했습니다. 다시 시도해주세요.');
             }
-
-            saveToLocalStorage();
-            renderMarkers();
-            updateStats();
-            updateProductList();
-            closeModal();
-            if (window.addMode) toggleAddMode();
         };
 
         function renderMarkers() {
@@ -1134,17 +1137,17 @@
             if (!window.selectedProduct) return;
             if (!confirm('이 제품을 삭제하시겠습니까?')) return;
 
-            window.products = window.products.filter(p => p.id !== window.selectedProduct.id);
+            updateSyncStatus('syncing', '삭제중...');
 
-            if (firebaseEnabled) {
+            try {
                 await remove(ref(db, 'products/' + window.selectedProduct.id));
+                updateSyncStatus('synced', '삭제완료');
+                closeInfoPanel();
+            } catch (error) {
+                console.error('삭제 실패:', error);
+                updateSyncStatus('error', '삭제실패');
+                alert('삭제에 실패했습니다. 다시 시도해주세요.');
             }
-
-            saveToLocalStorage();
-            renderMarkers();
-            updateStats();
-            updateProductList();
-            closeInfoPanel();
         };
 
         window.searchProducts = function() {
@@ -1220,28 +1223,21 @@
             const file = e.target.files[0];
             if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = async function(event) {
-                const floorplan = document.getElementById('floorplan');
-                floorplan.src = event.target.result;
-                floorplan.style.display = 'block';
-                document.getElementById('emptyState').style.display = 'none';
+            updateSyncStatus('syncing', '업로드중...');
 
-                if (firebaseEnabled) {
-                    try {
-                        const imageRef = storageRef(storage, 'floorplan.jpg');
-                        await uploadBytes(imageRef, file);
-                        const url = await getDownloadURL(imageRef);
-                        await set(ref(db, 'floorplan'), url);
-                    } catch (error) {
-                        console.error('Firebase 업로드 실패:', error);
-                    }
-                }
-
-                saveToLocalStorage();
+            try {
+                const imageRef = storageRef(storage, 'floorplan.jpg');
+                await uploadBytes(imageRef, file);
+                const url = await getDownloadURL(imageRef);
+                await set(ref(db, 'floorplan'), url);
+                
+                updateSyncStatus('synced', '업로드완료');
                 closeUploadModal();
-            };
-            reader.readAsDataURL(file);
+            } catch (error) {
+                console.error('업로드 실패:', error);
+                updateSyncStatus('error', '업로드실패');
+                alert('업로드에 실패했습니다. 다시 시도해주세요.');
+            }
         };
 
         const uploadZone = document.getElementById('uploadZone');
@@ -1301,11 +1297,9 @@
             floorplan.style.transformOrigin = 'top left';
         }
 
-        if (firebaseEnabled) {
-            loadFromFirebase();
-        } else {
-            loadFromLocalStorage();
-        }
+        // 초기화
+        setupFirebaseListeners();
+        updateSyncStatus('synced', '연결됨');
     </script>
 </body>
 </html>
