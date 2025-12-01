@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MSL 제품 위치 관리</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F7F7F8;
+            --bg-tertiary: #ECECF1;
+            --text-primary: #0D0D0D;
+            --text-secondary: #676767;
+            --text-tertiary: #8E8EA0;
+            --border-light: #E5E5E5;
+            --border-medium: #D1D1D6;
+            --accent-primary: #10A37F;
+            --accent-hover: #0E8F6F;
+            --accent-secondary: #6B46C1;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 2px 8px rgba(0,0,0,0.1);
+            --shadow-lg: 0 4px 16px rgba(0,0,0,0.12);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .top-bar {
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-light);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+            flex-shrink: 0;
+        }
+
+        .top-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo {
+            width: 32px;
+            height: 32px;
+            background: var(--accent-primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .app-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .top-bar-right {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-md);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--border-medium);
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            border-color: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+            border-color: #DC2626;
+        }
+
+        .btn.active {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--bg-primary);
+            border-right: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px 12px 10px 36px;
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-md);
+            background: var(--bg-secondary);
+            font-size: 14px;
+            transition: all 0.15s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            background: var(--bg-primary);
+        }
+
+        .search-wrapper {
+            position: relative;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            font-size: 14px;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .stat-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            background: var(--bg-secondary);
+            padding: 12px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-light);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .stat-item:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--border-medium);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .product-list {
+            margin-top: 8px;
+        }
+
+        .product-item {
+            padding: 10px 12px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-bottom: 4px;
+        }
+
+        .product-item:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .product-item.active {
+            background: var(--bg-tertiary);
+            border-left: 3px solid var(--accent-primary);
+            padding-left: 9px;
+        }
+
+        .product-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .product-meta {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .map-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-primary);
+            margin: 16px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+        }
+
+        .map-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-light);
+            background: var(--bg-primary);
+        }
+
+        .map-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .map-container {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+            background: var(--bg-secondary);
+        }
+
+        .map-wrapper {
+            position: relative;
+            min-width: 100%;
+            min-height: 100%;
+            display: inline-block;
+        }
+
+        #floorplan {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: none;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-tertiary);
+            padding: 40px;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        .empty-text {
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .marker {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+
+        .marker:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            z-index: 20;
+        }
+
+        .marker-dot {
+            width: 100%;
+            height: 100%;
+            background: var(--accent-primary);
+            border: 3px solid white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .marker.highlight .marker-dot {
+            background: var(--accent-secondary);
+            animation: marker-pulse 1s infinite;
+        }
+
+        @keyframes marker-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .marker-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text-primary);
+            color: white;
+            padding: 6px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            white-space: nowrap;
+            margin-bottom: 8px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .marker:hover .marker-tooltip {
+            opacity: 1;
+        }
+
+        .info-panel {
+            width: 360px;
+            background: var(--bg-primary);
+            border-left: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .info-panel.hidden {
+            display: none;
+        }
+
+        .info-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .info-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .info-section {
+            margin-bottom: 20px;
+        }
+
+        .info-section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .info-value {
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+            text-align: right;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-normal {
+            background: rgba(16, 163, 127, 0.1);
+            color: var(--accent-primary);
+        }
+
+        .status-low {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .status-check {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .info-actions {
+            padding: 16px;
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            gap: 8px;
+        }
+
+        .info-actions .btn {
+            flex: 1;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            max-width: 480px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-medium);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.15s ease;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .upload-zone {
+            border: 2px dashed var(--border-medium);
+            border-radius: var(--radius-lg);
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--accent-primary);
+            background: rgba(16, 163, 127, 0.02);
+        }
+
+        .upload-zone.drag-over {
+            border-color: var(--accent-primary);
+            background: rgba(16, 163, 127, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.3;
+        }
+
+        .upload-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .upload-hint {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        #imageInput {
+            display: none;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-medium);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar {
+                position: fixed;
+                left: -260px;
+                top: 60px;
+                bottom: 0;
+                z-index: 100;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.active {
+                left: 0;
+            }
+
+            .info-panel {
+                position: fixed;
+                right: -360px;
+                top: 60px;
+                bottom: 0;
+                z-index: 100;
+                transition: right 0.3s ease;
+            }
+
+            .info-panel.active {
+                right: 0;
+            }
+
+            .map-section {
+                margin: 8px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .top-bar {
+                padding: 8px 12px;
+            }
+
+            .app-title {
+                font-size: 14px;
+            }
+
+            .btn {
+                font-size: 13px;
+                padding: 6px 12px;
+            }
+
+            .sidebar {
+                width: 100%;
+                left: -100%;
+            }
+
+            .info-panel {
+                width: 100%;
+                right: -100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="top-bar">
+            <div class="top-bar-left">
+                <button class="icon-btn" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+                <div class="logo">🏭</div>
+                <h1 class="app-title">MSL 제품 위치 관리</h1>
+            </div>
+            <div class="top-bar-right">
+                <button class="btn" onclick="uploadImage()">도면 업로드</button>
+                <button class="btn" id="addModeBtn" onclick="toggleAddMode()">제품 추가</button>
+                <button class="btn" onclick="exportData()">저장</button>
+            </div>
+        </div>
+
+        <div class="content-wrapper">
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="search-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-box" id="searchInput" placeholder="검색..." oninput="searchProducts()">
+                    </div>
+                </div>
+                <div class="sidebar-content">
+                    <div class="stat-group">
+                        <div class="stat-item">
+                            <div class="stat-label">등록된 제품</div>
+                            <div class="stat-value" id="totalProducts">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">총 수량</div>
+                            <div class="stat-value" id="totalQuantity">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">재고 부족</div>
+                            <div class="stat-value" id="lowStockCount">0</div>
+                        </div>
+                    </div>
+                    <div class="product-list" id="productList"></div>
+                </div>
+            </div>
+
+            <div class="main-content">
+                <div class="map-section">
+                    <div class="map-toolbar">
+                        <span class="map-title">공장 도면</span>
+                        <div class="toolbar-actions">
+                            <button class="icon-btn" onclick="zoomOut()">−</button>
+                            <button class="icon-btn" onclick="resetZoom()">⟲</button>
+                            <button class="icon-btn" onclick="zoomIn()">+</button>
+                        </div>
+                    </div>
+                    <div class="map-container" id="mapContainer">
+                        <div class="map-wrapper" id="mapWrapper">
+                            <img id="floorplan" src="" alt="" style="display:none;">
+                            <div class="empty-state" id="emptyState">
+                                <div class="empty-icon">📋</div>
+                                <div class="empty-text">도면을 업로드하여 시작하세요</div>
+                                <button class="btn btn-primary" onclick="uploadImage()">도면 업로드</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-panel hidden" id="infoPanel">
+                <div class="info-header">
+                    <h2 class="info-title" id="productTitle">제품 정보</h2>
+                    <button class="icon-btn" onclick="closeInfoPanel()">✕</button>
+                </div>
+                <div class="info-content" id="productInfo"></div>
+                <div class="info-actions">
+                    <button class="btn" onclick="editProduct()">수정</button>
+                    <button class="btn btn-danger" onclick="deleteProduct()">삭제</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="productModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">제품 정보 입력</h2>
+            </div>
+            <form id="productForm" onsubmit="saveProduct(event)">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">제품명 *</label>
+                        <input type="text" class="form-input" id="productName" required placeholder="S3EH 콤프레서">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">제품 코드</label>
+                        <input type="text" class="form-input" id="productCode" placeholder="S3EH-001">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">수량 *</label>
+                        <input type="number" class="form-input" id="productQuantity" required min="0" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">위치</label>
+                        <input type="text" class="form-input" id="productLocation" placeholder="조립1팀">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">상태</label>
+                        <select class="form-select" id="productStatus">
+                            <option value="정상">정상</option>
+                            <option value="재고부족">재고부족</option>
+                            <option value="점검필요">점검필요</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">비고</label>
+                        <textarea class="form-input" id="productNotes" placeholder="추가 설명"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModal()">취소</button>
+                    <button type="submit" class="btn btn-primary">저장</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">도면 업로드</h2>
+            </div>
+            <div class="modal-body">
+                <div class="upload-zone" id="uploadZone" onclick="document.getElementById('imageInput').click()">
+                    <div class="upload-icon">📤</div>
+                    <div class="upload-text">클릭하거나 파일을 드래그하세요</div>
+                    <div class="upload-hint">JPG, PNG 파일 지원</div>
+                </div>
+                <input type="file" id="imageInput" accept="image/*" onchange="handleImageUpload(event)">
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeUploadModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_BUCKET.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        let db, storage, firebaseEnabled = false;
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getDatabase(app);
+            storage = getStorage(app);
+            firebaseEnabled = true;
+        } catch (error) {
+            console.log('로컬 저장소 모드');
+        }
+
+        window.products = [];
+        window.addMode = false;
+        window.currentProductId = null;
+        window.selectedProduct = null;
+        window.currentZoom = 1;
+
+        function saveToLocalStorage() {
+            localStorage.setItem('mslProducts', JSON.stringify(window.products));
+            const floorplan = document.getElementById('floorplan');
+            if (floorplan.src && !floorplan.src.includes('blob:')) {
+                localStorage.setItem('mslFloorplan', floorplan.src);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('mslProducts');
+            if (saved) {
+                window.products = JSON.parse(saved);
+                renderMarkers();
+                updateStats();
+                updateProductList();
+            }
+
+            const savedImage = localStorage.getItem('mslFloorplan');
+            if (savedImage) {
+                const floorplan = document.getElementById('floorplan');
+                floorplan.src = savedImage;
+                floorplan.style.display = 'block';
+                document.getElementById('emptyState').style.display = 'none';
+            }
+        }
+
+        async function loadFromFirebase() {
+            if (!firebaseEnabled) return;
+            try {
+                const productsRef = ref(db, 'products');
+                const snapshot = await get(productsRef);
+                if (snapshot.exists()) {
+                    window.products = Object.values(snapshot.val());
+                    renderMarkers();
+                    updateStats();
+                    updateProductList();
+                }
+
+                const imageRef = ref(db, 'floorplan');
+                const imageSnapshot = await get(imageRef);
+                if (imageSnapshot.exists()) {
+                    const floorplan = document.getElementById('floorplan');
+                    floorplan.src = imageSnapshot.val();
+                    floorplan.style.display = 'block';
+                    document.getElementById('emptyState').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Firebase 로드 실패:', error);
+            }
+        }
+
+        window.toggleSidebar = function() {
+            document.getElementById('sidebar').classList.toggle('active');
+        };
+
+        window.toggleAddMode = function() {
+            window.addMode = !window.addMode;
+            const btn = document.getElementById('addModeBtn');
+            if (window.addMode) {
+                btn.classList.add('active');
+                btn.textContent = '추가 모드';
+                document.getElementById('mapWrapper').style.cursor = 'crosshair';
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = '제품 추가';
+                document.getElementById('mapWrapper').style.cursor = '';
+            }
+        };
+
+        document.getElementById('mapWrapper').addEventListener('click', function(e) {
+            if (!window.addMode) return;
+            if (e.target.id !== 'floorplan') return;
+
+            const rect = document.getElementById('floorplan').getBoundingClientRect();
+            const x = ((e.clientX - rect.left) / rect.width) * 100;
+            const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+            window.currentProductId = Date.now().toString();
+            document.getElementById('productModal').classList.add('active');
+            document.getElementById('productForm').dataset.x = x;
+            document.getElementById('productForm').dataset.y = y;
+        });
+
+        window.saveProduct = async function(e) {
+            e.preventDefault();
+
+            const form = document.getElementById('productForm');
+            const product = {
+                id: window.currentProductId || Date.now().toString(),
+                name: document.getElementById('productName').value,
+                code: document.getElementById('productCode').value,
+                quantity: parseInt(document.getElementById('productQuantity').value),
+                location: document.getElementById('productLocation').value,
+                status: document.getElementById('productStatus').value,
+                notes: document.getElementById('productNotes').value,
+                x: parseFloat(form.dataset.x),
+                y: parseFloat(form.dataset.y),
+                timestamp: new Date().toISOString()
+            };
+
+            const index = window.products.findIndex(p => p.id === product.id);
+            if (index >= 0) {
+                window.products[index] = product;
+            } else {
+                window.products.push(product);
+            }
+
+            if (firebaseEnabled) {
+                await set(ref(db, 'products/' + product.id), product);
+            }
+
+            saveToLocalStorage();
+            renderMarkers();
+            updateStats();
+            updateProductList();
+            closeModal();
+            if (window.addMode) toggleAddMode();
+        };
+
+        function renderMarkers() {
+            const existing = document.querySelectorAll('.marker');
+            existing.forEach(m => m.remove());
+
+            window.products.forEach((product, index) => {
+                const marker = document.createElement('div');
+                marker.className = 'marker';
+                marker.style.left = product.x + '%';
+                marker.style.top = product.y + '%';
+                marker.innerHTML = `
+                    <div class="marker-dot">${index + 1}</div>
+                    <div class="marker-tooltip">${product.name}</div>
+                `;
+                marker.onclick = () => showProductInfo(product);
+                document.getElementById('mapWrapper').appendChild(marker);
+            });
+        }
+
+        function updateProductList() {
+            const listEl = document.getElementById('productList');
+            if (window.products.length === 0) {
+                listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-tertiary); font-size: 13px;">등록된 제품이 없습니다</div>';
+                return;
+            }
+
+            listEl.innerHTML = window.products.map((product, index) => `
+                <div class="product-item" onclick="showProductInfo(window.products[${index}])">
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-meta">${product.location || '위치 미지정'} · ${product.quantity}개</div>
+                </div>
+            `).join('');
+        }
+
+        window.showProductInfo = function(product) {
+            window.selectedProduct = product;
+            document.getElementById('productTitle').textContent = product.name;
+            
+            let statusClass = 'status-normal';
+            let statusText = '정상';
+            if (product.status === '재고부족') {
+                statusClass = 'status-low';
+                statusText = '재고부족';
+            } else if (product.status === '점검필요') {
+                statusClass = 'status-check';
+                statusText = '점검필요';
+            }
+            
+            document.getElementById('productInfo').innerHTML = `
+                <div class="info-section">
+                    <div class="info-section-title">기본 정보</div>
+                    <div class="info-row">
+                        <span class="info-label">제품 코드</span>
+                        <span class="info-value">${product.code || '-'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">수량</span>
+                        <span class="info-value">${product.quantity}개</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">위치</span>
+                        <span class="info-value">${product.location || '-'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">상태</span>
+                        <span class="info-value">
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </span>
+                    </div>
+                </div>
+                ${product.notes ? `
+                <div class="info-section">
+                    <div class="info-section-title">비고</div>
+                    <div style="padding: 10px 0; color: var(--text-secondary); font-size: 14px;">${product.notes}</div>
+                </div>
+                ` : ''}
+                <div class="info-section">
+                    <div class="info-section-title">메타 정보</div>
+                    <div class="info-row">
+                        <span class="info-label">등록일</span>
+                        <span class="info-value">${new Date(product.timestamp).toLocaleDateString('ko-KR')}</span>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('infoPanel').classList.remove('hidden');
+            document.getElementById('infoPanel').classList.add('active');
+
+            document.querySelectorAll('.marker').forEach(m => m.classList.remove('highlight'));
+            const markers = document.querySelectorAll('.marker');
+            const index = window.products.findIndex(p => p.id === product.id);
+            if (markers[index]) {
+                markers[index].classList.add('highlight');
+            }
+
+            document.querySelectorAll('.product-item').forEach(item => item.classList.remove('active'));
+            const items = document.querySelectorAll('.product-item');
+            if (items[index]) {
+                items[index].classList.add('active');
+            }
+        };
+
+        window.editProduct = function() {
+            if (!window.selectedProduct) return;
+
+            window.currentProductId = window.selectedProduct.id;
+            document.getElementById('productName').value = window.selectedProduct.name;
+            document.getElementById('productCode').value = window.selectedProduct.code || '';
+            document.getElementById('productQuantity').value = window.selectedProduct.quantity;
+            document.getElementById('productLocation').value = window.selectedProduct.location || '';
+            document.getElementById('productStatus').value = window.selectedProduct.status;
+            document.getElementById('productNotes').value = window.selectedProduct.notes || '';
+            
+            const form = document.getElementById('productForm');
+            form.dataset.x = window.selectedProduct.x;
+            form.dataset.y = window.selectedProduct.y;
+
+            closeInfoPanel();
+            document.getElementById('productModal').classList.add('active');
+        };
+
+        window.deleteProduct = async function() {
+            if (!window.selectedProduct) return;
+            if (!confirm('이 제품을 삭제하시겠습니까?')) return;
+
+            window.products = window.products.filter(p => p.id !== window.selectedProduct.id);
+
+            if (firebaseEnabled) {
+                await remove(ref(db, 'products/' + window.selectedProduct.id));
+            }
+
+            saveToLocalStorage();
+            renderMarkers();
+            updateStats();
+            updateProductList();
+            closeInfoPanel();
+        };
+
+        window.searchProducts = function() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            
+            document.querySelectorAll('.marker').forEach(m => m.classList.remove('highlight'));
+
+            if (!query) {
+                updateProductList();
+                return;
+            }
+
+            const filtered = window.products.filter(p => 
+                p.name.toLowerCase().includes(query) ||
+                (p.location && p.location.toLowerCase().includes(query)) ||
+                (p.code && p.code.toLowerCase().includes(query))
+            );
+
+            const listEl = document.getElementById('productList');
+            if (filtered.length === 0) {
+                listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-tertiary); font-size: 13px;">검색 결과가 없습니다</div>';
+                return;
+            }
+
+            listEl.innerHTML = filtered.map(product => {
+                const index = window.products.findIndex(p => p.id === product.id);
+                return `
+                    <div class="product-item" onclick="showProductInfo(window.products[${index}])">
+                        <div class="product-name">${product.name}</div>
+                        <div class="product-meta">${product.location || '위치 미지정'} · ${product.quantity}개</div>
+                    </div>
+                `;
+            }).join('');
+
+            filtered.forEach(product => {
+                const index = window.products.findIndex(p => p.id === product.id);
+                const markers = document.querySelectorAll('.marker');
+                if (markers[index]) {
+                    markers[index].classList.add('highlight');
+                }
+            });
+        };
+
+        function updateStats() {
+            document.getElementById('totalProducts').textContent = window.products.length;
+            document.getElementById('totalQuantity').textContent = window.products.reduce((sum, p) => sum + p.quantity, 0);
+            document.getElementById('lowStockCount').textContent = window.products.filter(p => p.status === '재고부족').length;
+        }
+
+        window.closeModal = function() {
+            document.getElementById('productModal').classList.remove('active');
+            document.getElementById('productForm').reset();
+            window.currentProductId = null;
+        };
+
+        window.closeInfoPanel = function() {
+            document.getElementById('infoPanel').classList.add('hidden');
+            document.getElementById('infoPanel').classList.remove('active');
+            window.selectedProduct = null;
+            document.querySelectorAll('.marker').forEach(m => m.classList.remove('highlight'));
+            document.querySelectorAll('.product-item').forEach(item => item.classList.remove('active'));
+        };
+
+        window.uploadImage = function() {
+            document.getElementById('uploadModal').classList.add('active');
+        };
+
+        window.closeUploadModal = function() {
+            document.getElementById('uploadModal').classList.remove('active');
+        };
+
+        window.handleImageUpload = async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                const floorplan = document.getElementById('floorplan');
+                floorplan.src = event.target.result;
+                floorplan.style.display = 'block';
+                document.getElementById('emptyState').style.display = 'none';
+
+                if (firebaseEnabled) {
+                    try {
+                        const imageRef = storageRef(storage, 'floorplan.jpg');
+                        await uploadBytes(imageRef, file);
+                        const url = await getDownloadURL(imageRef);
+                        await set(ref(db, 'floorplan'), url);
+                    } catch (error) {
+                        console.error('Firebase 업로드 실패:', error);
+                    }
+                }
+
+                saveToLocalStorage();
+                closeUploadModal();
+            };
+            reader.readAsDataURL(file);
+        };
+
+        const uploadZone = document.getElementById('uploadZone');
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('drag-over');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                document.getElementById('imageInput').files = e.dataTransfer.files;
+                handleImageUpload({ target: { files: [file] } });
+            }
+        });
+
+        window.exportData = function() {
+            const data = {
+                products: window.products,
+                exportDate: new Date().toISOString(),
+                company: 'MSL COMPRESSOR'
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `msl-products-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        };
+
+        window.zoomIn = function() {
+            window.currentZoom = Math.min(window.currentZoom + 0.2, 3);
+            applyZoom();
+        };
+
+        window.zoomOut = function() {
+            window.currentZoom = Math.max(window.currentZoom - 0.2, 0.5);
+            applyZoom();
+        };
+
+        window.resetZoom = function() {
+            window.currentZoom = 1;
+            applyZoom();
+        };
+
+        function applyZoom() {
+            const floorplan = document.getElementById('floorplan');
+            floorplan.style.transform = `scale(${window.currentZoom})`;
+            floorplan.style.transformOrigin = 'top left';
+        }
+
+        if (firebaseEnabled) {
+            loadFromFirebase();
+        } else {
+            loadFromLocalStorage();
+        }
+    </script>
+</body>
+</html>
