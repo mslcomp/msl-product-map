@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MSL 제품 위치 관리</title>
+    <title>MSL 제품 위치 추적 시스템</title>
     <style>
         * {
             margin: 0;
@@ -67,14 +67,17 @@
         }
 
         .logo {
-            width: 32px;
-            height: 32px;
-            background: var(--accent-primary);
-            border-radius: 8px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         .app-title {
@@ -328,20 +331,25 @@
             position: relative;
             overflow: auto;
             background: var(--bg-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .map-wrapper {
             position: relative;
-            min-width: 100%;
-            min-height: 100%;
             display: inline-block;
+            max-width: 100%;
+            max-height: 100%;
         }
 
         #floorplan {
             display: block;
-            width: 100%;
+            width: auto;
             height: auto;
-            max-width: none;
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
         }
 
         .empty-state {
@@ -738,8 +746,10 @@
         <div class="top-bar">
             <div class="top-bar-left">
                 <button class="icon-btn" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
-                <div class="logo">🏭</div>
-                <h1 class="app-title">MSL 제품 위치 관리</h1>
+                <div class="logo">
+                    <img src="https://raw.githubusercontent.com/mslcomp/msl-product-map/main/msl_logo.jpg" alt="MSL Logo">
+                </div>
+                <h1 class="app-title">MSL 제품 위치 추적 시스템</h1>
                 <span class="sync-status" id="syncStatus">
                     <span id="syncIcon">●</span>
                     <span id="syncText">연결중...</span>
@@ -1292,9 +1302,8 @@
         };
 
         function applyZoom() {
-            const floorplan = document.getElementById('floorplan');
-            floorplan.style.transform = `scale(${window.currentZoom})`;
-            floorplan.style.transformOrigin = 'top left';
+            const wrapper = document.getElementById('mapWrapper');
+            wrapper.style.transform = `scale(${window.currentZoom})`;
         }
 
         // 초기화
