@@ -964,6 +964,11 @@
                     floorplan.src = snapshot.val();
                     floorplan.style.display = 'block';
                     document.getElementById('emptyState').style.display = 'none';
+                    
+                    // 이미지 로드 완료 후 마커 재렌더링
+                    floorplan.onload = () => {
+                        renderMarkers();
+                    };
                 }
             });
         }
@@ -990,14 +995,20 @@
             if (!window.addMode) return;
             if (e.target.id !== 'floorplan') return;
 
-            const rect = document.getElementById('floorplan').getBoundingClientRect();
-            const x = ((e.clientX - rect.left) / rect.width) * 100;
-            const y = ((e.clientY - rect.top) / rect.height) * 100;
+            const img = document.getElementById('floorplan');
+            const rect = img.getBoundingClientRect();
+            
+            // 실제 이미지의 원본 크기 기준으로 계산
+            const scaleX = img.naturalWidth / rect.width;
+            const scaleY = img.naturalHeight / rect.height;
+            
+            const relativeX = (e.clientX - rect.left) * scaleX;
+            const relativeY = (e.clientY - rect.top) * scaleY;
 
             window.currentProductId = Date.now().toString();
             document.getElementById('productModal').classList.add('active');
-            document.getElementById('productForm').dataset.x = x;
-            document.getElementById('productForm').dataset.y = y;
+            document.getElementById('productForm').dataset.x = relativeX;
+            document.getElementById('productForm').dataset.y = relativeY;
         });
 
         window.saveProduct = async function(e) {
@@ -1034,11 +1045,23 @@
             const existing = document.querySelectorAll('.marker');
             existing.forEach(m => m.remove());
 
+            const img = document.getElementById('floorplan');
+            if (!img || !img.complete) return;
+
+            const rect = img.getBoundingClientRect();
+            const scaleX = rect.width / img.naturalWidth;
+            const scaleY = rect.height / img.naturalHeight;
+
             window.products.forEach((product, index) => {
                 const marker = document.createElement('div');
                 marker.className = 'marker';
-                marker.style.left = product.x + '%';
-                marker.style.top = product.y + '%';
+                
+                // 픽셀 좌표를 현재 화면 비율로 변환
+                const displayX = product.x * scaleX;
+                const displayY = product.y * scaleY;
+                
+                marker.style.left = displayX + 'px';
+                marker.style.top = displayY + 'px';
                 marker.innerHTML = `
                     <div class="marker-dot">${index + 1}</div>
                     <div class="marker-tooltip">${product.name}</div>
@@ -1316,6 +1339,15 @@
         // 초기화
         setupFirebaseListeners();
         updateSyncStatus('synced', '연결됨');
+        
+        // 윈도우 리사이즈 시 마커 위치 재계산
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                renderMarkers();
+            }, 250);
+        });
     </script>
 </body>
 </html>
