@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MSL 제품 위치 추적 시스템</title>
+    <title>MSL 제품 위치 관리</title>
     <style>
         * {
             margin: 0;
@@ -63,25 +63,24 @@
         .top-bar-left {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
         }
 
-        .logo {
-            width: 40px;
-            height: 40px;
+        .menu-btn-wrapper {
+            position: relative;
             display: flex;
             align-items: center;
-            justify-content: center;
         }
 
-        .logo img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+        .menu-label {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-left: 8px;
+            white-space: nowrap;
         }
 
         .app-title {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 600;
             color: var(--text-primary);
         }
@@ -720,8 +719,16 @@
                 padding: 8px 12px;
             }
 
+            .top-bar-left {
+                gap: 8px;
+            }
+
             .app-title {
                 font-size: 14px;
+            }
+
+            .menu-label {
+                display: none;
             }
 
             .btn {
@@ -745,9 +752,9 @@
     <div class="app-container">
         <div class="top-bar">
             <div class="top-bar-left">
-                <button class="icon-btn" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
-                <div class="logo">
-                    <img src="https://raw.githubusercontent.com/mslcomp/msl-product-map/main/msl_logo.jpg" alt="MSL Logo">
+                <div class="menu-btn-wrapper">
+                    <button class="icon-btn" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+                    <span class="menu-label">제품 리스트</span>
                 </div>
                 <h1 class="app-title">MSL 제품 위치 추적 시스템</h1>
                 <span class="sync-status" id="syncStatus">
